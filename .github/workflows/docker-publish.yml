@@ -1,0 +1,74 @@
+# .github/workflows/docker-publish.yml
+
+# 工作流的名称
+name: Docker Image CI
+
+# 触发工作流的事件
+on:
+  # 当有代码推送到 main 分支时触发
+  push:
+    branches: [ "main" ]
+  # 当有针对 main 分支的 Pull Request 时触发
+  pull_request:
+    branches: [ "main" ]
+  # 允许你从 Actions 页面手动触发此工作流
+  workflow_dispatch:
+
+# 定义环境变量，方便复用
+env:
+  # ghcr.io 是 GitHub Container Registry 的地址
+  # github.repository 会自动替换为 "你的用户名/你的仓库名"
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: ubuntu22.04-java8-hadoop2.7.1-python3.10
+# 定义工作任务
+jobs:
+  # 任务的ID，可以自定义
+  build-and-push:
+    # 任务运行的虚拟环境
+    runs-on: ubuntu-latest
+    # 为此任务授予的权限，这是安全最佳实践
+    permissions:
+      contents: read
+      packages: write
+
+    # 任务执行的步骤
+    steps:
+      # 第一步：检出代码
+      # 使用官方的 actions/checkout@v4 action
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 第二步：登录到 GitHub Container Registry
+      # 使用官方的 docker/login-action@v3 action
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          # github.actor 会自动替换为你的 GitHub 用户名
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN 是由 GitHub Actions 自动生成的临时密钥，无需自己创建
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 第三步：提取 Docker 元数据（如标签和标签）
+      # 使用官方的 docker/metadata-action@v5
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+
+      # 第四步：构建并推送 Docker 镜像
+      # 使用官方的 docker/build-push-action@v5
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          # 构建上下文的路径（. 表示项目根目录）
+          context: .
+          # 只有当事件不是 pull_request 时才执行推送（即 push 到 main 分支时）
+          # 在 pull_request 事件中，此步骤仅构建镜像用于测试，但不会推送
+          push: ${{ github.event_name != 'pull_request' }}
+          # 使用上一步提取的元数据作为镜像的标签
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          labels: ${{ steps.meta.outputs.labels }}
