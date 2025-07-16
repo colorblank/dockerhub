@@ -17,6 +17,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
     tar \
+    vim \
     python3 \
     python3-pip \
     python-is-python3 \
@@ -31,8 +32,11 @@ RUN wget ${HADOOP_URL} -O /tmp/hadoop.tar.gz && \
 # STEP 6: Create configuration mount point
 RUN mkdir -p ${HADOOP_CONF_DIR}
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 # STEP 7: Set working directory
 WORKDIR /app
 
+ENTRYPOINT [ "/entrypoint.sh" ]
 # STEP 8: Set default command
 CMD ["bash"]
