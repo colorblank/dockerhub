@@ -19,4 +19,4 @@ echo "HADOOP_CLASSPATH: $HADOOP_CLASSPATH"
 echo "Entrypoint: Hadoop 环境配置完成。"
 echo "------------------------------------"
 
-exec "$@"
+exec /usr/bin/tf_serving_entrypoint.sh "$@"
