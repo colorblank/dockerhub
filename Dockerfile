@@ -1,5 +1,4 @@
 # STEP 1: Use the official TensorFlow Serving image as the base
-# Using a specific version tag based on Ubuntu 22.04 (Jammy) is recommended
 FROM tensorflow/serving:2.18.0
 
 # STEP 2: Define Hadoop version and download address
