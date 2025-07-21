@@ -12,9 +12,9 @@ if [ -z "$HADOOP_HOME" ]; then
 fi
 
 
-export CLASSPATH=$(hadoop classpath --glob):$CLASSPATH
+export CLASSPATH=$(hadoop classpath --glob)
 # (可选) 打印 CLASSPATH 用于调试，但在线上环境可能会刷屏，可以注释掉
-echo "HADOOP_CLASSPATH: $HADOOP_CLASSPATH"
+echo "CLASSPATH: $CLASSPATH"
 
 echo "Entrypoint: Hadoop 环境配置完成。"
 echo "------------------------------------"

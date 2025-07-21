@@ -11,6 +11,7 @@ ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=/etc/hadoop/conf
 ENV PATH=$PATH:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
+ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop 
 
 # STEP 4: Install system dependencies like Java 8 and Python
 # The TF Serving image is minimal, so we need to add Java, tar, etc.
