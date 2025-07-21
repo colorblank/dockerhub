@@ -9,7 +9,6 @@ ARG HADOOP_URL=https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VER
 # Note the updated JAVA_HOME path for OpenJDK installed via apt
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV HADOOP_HOME=/opt/hadoop
-ENV HADOOP_CONF_DIR=/etc/hadoop/conf
 ENV PATH=$PATH:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
 ENV HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop 
 
@@ -40,8 +39,6 @@ RUN wget ${HADOOP_URL} -O /tmp/hadoop.tar.gz && \
     tar -xvf /tmp/hadoop.tar.gz -C ${HADOOP_HOME} --strip-components 1 && \
     rm /tmp/hadoop.tar.gz
 
-# STEP 6: Create configuration mount point
-RUN mkdir -p ${HADOOP_CONF_DIR}
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
