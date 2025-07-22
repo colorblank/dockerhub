@@ -58,16 +58,16 @@ ENV PATH=$PATH:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
 
 # -- 克隆 TensorFlow Serving 源代码 --
 # 我们克隆指定的版本标签，并拉取所有子模块（包括 TensorFlow 本身）。
-ENV TF_SERVING_VERSION=2.18.0
+ENV TF_SERVING_VERSION=r2.18
 WORKDIR /
-RUN git clone --depth=1 --branch=${TF_SERVING_VERSION} https://github.com/tensorflow/serving.git
+RUN git clone --depth=1 --recurse-submodules --branch=${TF_SERVING_VERSION} https://github.com/tensorflow/serving.git
 
 # -- 配置并编译 TensorFlow Serving --
 WORKDIR /serving
 # TensorFlow 的编译配置脚本是交互式的。我们使用 'yes' 命令自动回答所有问题，
 # 这样就可以在 Docker build 期间自动完成配置。
 # 这一步会探测系统环境，并生成 Bazel 的编译配置文件。
-RUN yes "" | tensorflow/configure.sh
+# RUN yes "" | tensorflow/configure.sh
 
 # 使用 Bazel 编译 TensorFlow Model Server。
 # --config=release: 启用优化以获得更好的性能。
