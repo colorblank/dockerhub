@@ -19,7 +19,7 @@ env:
   # ghcr.io 是 GitHub Container Registry 的地址
   # github.repository 会自动替换为 "你的用户名/你的仓库名"
   IMAGE_NAME: ghcr.io/${{ github.repository }}
-  IMAGE_TAG: ubuntu20.04-java8-hadoop2.7.1-python3.10-tfs2.18.0
+  IMAGE_TAG: ubuntu22.04-java8-hadoop2.7.1-python3.10-tfs2.18.0-20250722
 # 定义工作任务
 jobs:
   # 任务的ID，可以自定义
