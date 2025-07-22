@@ -34,7 +34,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 &
 # -- 设置 Java 和 Bazel 环境变量 --
 # Bazel 是 TensorFlow 使用的构建工具。TensorFlow Serving 2.18.0 需要一个兼容的 Bazel 版本。
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-ENV BAZEL_VERSION=6.1.2
+ENV BAZEL_VERSION=6.5.0
 RUN wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
     chmod +x bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
     ./bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
