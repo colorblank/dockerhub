@@ -23,7 +23,7 @@ env:
 # 定义工作任务
 jobs:
   # 任务的ID，可以自定义
-  build-and-push:
+  tensorflow-serving-hdfs:
     # 任务运行的虚拟环境
     runs-on: ubuntu-latest
     # 为此任务授予的权限，这是安全最佳实践
@@ -63,7 +63,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           # 构建上下文的路径（. 表示项目根目录）
-          context: .
+          context: ./tfs.docker
           # 只有当事件不是 pull_request 时才执行推送（即 push 到 main 分支时）
           # 在 pull_request 事件中，此步骤仅构建镜像用于测试，但不会推送
           push: ${{ github.event_name != 'pull_request' }}
