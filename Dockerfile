@@ -112,18 +112,21 @@ RUN apt-get update && \
     openjdk-8-jre-headless \
     libzmq5 \
     zlib1g \
+    curl \
+    vim \
     python3.10 \
     python3-dev \
     python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-    
+
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 RUN pip install --no-cache-dir \
     pyarrow \
     filelock \
     schedule \
-    pyyaml
+    pyyaml \
+    dacite
 
 
 # -- 从构建阶段复制产物 --
