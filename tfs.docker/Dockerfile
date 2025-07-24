@@ -1,156 +1,116 @@
 # #############################################################################
-# # 阶段 1: 构建环境 (Builder)
+# # STAGE 1: Build Environment (Builder)
 # #
-# # 融合了官方 build 文件的最佳实践，提供一个非常健壮的编译环境。
+# # This stage builds the TensorFlow Serving config API Python wheel.
+# # It uses best practices from the official build files for a robust environment.
 # #############################################################################
+ARG TF_SERVING_VERSION=2.18.0
 FROM ubuntu:22.04 AS builder
 
-# -- 设置环境变量 --
+# -- Set Environment Variables --
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TF_SERVING_VERSION=2.18.0
-# 使用官方文件验证过的 Bazel 版本
-ENV BAZEL_VERSION=6.5.0
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-ENV HADOOP_VERSION=2.7.1
-ENV HADOOP_HOME=/opt/hadoop
-ENV HADOOP_CONF_DIR=/etc/hadoop
-ENV PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
 
-# -- 安装系统和编译依赖 (参考官方文件) --
-# 增加了更多 TensorFlow 编译时可能需要的库，使构建过程更稳定。
+# -- Install System and Build Dependencies --
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    automake \
-    build-essential \
     ca-certificates \
     curl \
     git \
     libcurl4-openssl-dev \
     libfreetype6-dev \
-    libpng-dev \
     libtool \
     libzmq3-dev \
-    openjdk-8-jdk \
     pkg-config \
     python3.10 \
     python3-dev \
     python3-pip \
-    software-properties-common \
-    swig \
-    unzip \
-    wget \
-    zip \
-    zlib1g-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# -- 安装 Python 构建依赖 (参考官方文件) --
+# -- Install Python Build Dependencies --
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir \
-    future \
-    grpcio \
-    h5py \
-    keras_applications \
-    keras_preprocessing \
-    mock \
-    numpy \
-    portpicker \
-    requests \
-    setuptools \
-    six
+    protobuf==4.25.3 \
+    grpcio==1.64.1 \
+    wheel
 
-# -- 安装 Bazel --
-RUN wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh && \
-    chmod +x bazel-*.sh && \
-    ./bazel-*.sh && \
-    rm bazel-*.sh
-
-# -- 安装 Hadoop --
-RUN wget -q https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz && \
-    tar -xzf hadoop-${HADOOP_VERSION}.tar.gz -C /opt/ && \
-    mv /opt/hadoop-${HADOOP_VERSION} ${HADOOP_HOME} && \
-    rm hadoop-${HADOOP_VERSION}.tar.gz
-
-# -- 克隆 TensorFlow Serving 源码 --
+# -- Clone TensorFlow Serving Source Code --
 WORKDIR /
+# Use the tag format "2.18.0" which is more common than "r2.18" for releases
 RUN git clone --depth=1 --recurse-submodules --branch=${TF_SERVING_VERSION} https://github.com/tensorflow/serving.git
 
-# -- 编译 TensorFlow Serving --
 WORKDIR /serving
-# 【优化】: 使用 ARG 定义可覆盖的构建选项，这是官方文件的最佳实践。
-# 默认使用 --config=release 进行优化编译。
-ARG TF_SERVING_BUILD_OPTIONS="--config=release"
-# 默认的 Bazel 选项，包括了之前为解决资源问题而加的 jobs 限制。
-ARG TF_SERVING_BAZEL_OPTIONS="--jobs=2 --local_ram_resources=HOST_RAM*0.5"
-RUN echo "--- Building with Build Options: ${TF_SERVING_BUILD_OPTIONS}" && \
-    echo "--- Building with Bazel Options: ${TF_SERVING_BAZEL_OPTIONS}" && \
-    bazel build \
-    ${TF_SERVING_BAZEL_OPTIONS} \
-    ${TF_SERVING_BUILD_OPTIONS} \
-    --define=with_hdfs_support=true \
-    --verbose_failures \
-    tensorflow_serving/model_servers:tensorflow_model_server
 
-# run build_config_api.sh to generate python wheel file in dist/
+# -- Build the Python Wheel --
+# This script seems to be custom. Ensure it's in the build context.
 COPY build_config_api.sh /serving/
-RUN chmod +x build_config_api.sh && \
-    ./build_config_api.sh
-
+RUN chmod +x build_config_api.sh && ./build_config_api.sh
 
 # #############################################################################
-# # 阶段 2: 最终运行环境 (Final Image)
+# # STAGE 2: Final Runtime Image
 # #
-# # 保持了我们之前的优势：创建一个非常小且干净的最终镜像。
+# # This stage creates a minimal, clean final image with FUSE support for HDFS.
 # #############################################################################
-FROM ubuntu:22.04
+ARG HADOOP_VERSION=2.7.7
+ARG TENSORFLOW_SERVING_VERSION=2.18.0
+FROM tensorflow/serving:${TENSORFLOW_SERVING_VERSION}
 
-# -- 设置核心环境变量 --
-ENV DEBIAN_FRONTEND=noninteractive
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-ENV HADOOP_HOME=/opt/hadoop
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
-ENV HADOOP_CONF_DIR=/etc/hadoop
-ENV LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/amd64/server
+# -- Set Core Environment Variables --
+ENV DEBIAN_FRONTEND=noninteractive \
+    JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
+    HADOOP_VERSION=${HADOOP_VERSION} \
+    HADOOP_HOME=/opt/hadoop/hadoop-${HADOOP_VERSION} \
+    HADOOP_CONF_DIR=/etc/hadoop \
+    HDFS_MOUNT_POINT=/hdfs
 
-# -- 安装最小运行时依赖 --
-# 除了 JRE，还包括编译时链接的库的运行时版本 (如 libzmq5, zlib1g)。
+# -- Add Hadoop binaries to PATH and set library paths --
+ENV PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:${PATH} \
+    LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/amd64/server:${HADOOP_HOME}/lib/native:${LD_LIBRARY_PATH}
+
+# -- Install Minimal Runtime Dependencies including FUSE --
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     openjdk-8-jre-headless \
-    libzmq5 \
-    zlib1g \
     curl \
     vim \
     python3.10 \
-    python3-dev \
     python3-pip \
+    fuse \
+    libhdfs0-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# -- Set Python 3.10 as default --
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+
+# -- Install Python Packages --
 RUN pip install --no-cache-dir \
     pyarrow \
     filelock \
     schedule \
     pyyaml \
-    dacite
+    dacite \
+    protobuf==4.25.3 \
+    grpcio==1.64.1 \
+    wheel
 
+# -- Download and Install Hadoop --
+RUN curl -sL https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz | tar -xz -C /opt/ && \
+    ln -s /opt/hadoop-${HADOOP_VERSION} /opt/hadoop
 
-# -- 从构建阶段复制产物 --
-COPY --from=builder ${HADOOP_HOME} ${HADOOP_HOME}
-COPY --from=builder /serving/bazel-bin/tensorflow_serving/model_servers/tensorflow_model_server /usr/local/bin/
-# -- 复制生成的 Python 包 --
-COPY --from=builder /serving/dist/tensorflow_serving_config-0.1.0-py3-none-any.whl /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl
-# -- 安装 Python 包 --
-RUN pip install --no-cache-dir /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl && \
-    rm /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl
+# -- Copy and install the Python wheel from the builder stage --
+COPY --from=builder /serving/dist/tensorflow_serving_config-*.whl /tmp/
+RUN pip install --no-cache-dir /tmp/tensorflow_serving_config-*.whl && \
+    rm /tmp/tensorflow_serving_config-*.whl
 
-
-# -- 配置环境 --
-RUN mkdir -p ${HADOOP_CONF_DIR}
+# -- Configure Environment --
+RUN mkdir -p ${HADOOP_CONF_DIR} ${HDFS_MOUNT_POINT}
 EXPOSE 8501 8500
-ENV MODEL_NAME=default_model
-ENV MODEL_BASE_PATH=/models
+ENV MODEL_NAME=default_model \
+    MODEL_BASE_PATH=${HDFS_MOUNT_POINT}/models
 
-# -- 容器启动命令 --
-ENTRYPOINT ["/usr/local/bin/tensorflow_model_server"]
-CMD ["--port=8500", "--rest_api_port=8501", "--model_name=${MODEL_NAME}", "--model_base_path=${MODEL_BASE_PATH}"]
+# -- Copy and set up the entrypoint --
+COPY entrypoint.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
+
+# -- Container Start Command --
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
