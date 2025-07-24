@@ -14,6 +14,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         # 网络工具
         curl \
+        git \
         wget \
         # 文本编辑器
         vim \
@@ -53,6 +54,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     # 更新 pip
     python3.10 -m pip install --no-cache-dir --upgrade pip
+
+# 设置 Python 3.10 为默认 python
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+    update-alternatives --set python3 /usr/bin/python3 
+
 
 # --- 安装 Hadoop 2.7.1 ---
 
