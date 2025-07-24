@@ -46,6 +46,7 @@ RUN apt-get update && \
     curl \
     vim \
     fuse \
+    hadoop-hdfs-fuse \
     libssl-dev \
     zlib1g-dev && \
     # --- 4. 设置 Python 3.10 为默认 Python ---
