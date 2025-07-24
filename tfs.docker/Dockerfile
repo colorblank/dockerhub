@@ -36,7 +36,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
 # -- Clone TensorFlow Serving Source Code --
 WORKDIR /
 # Use the tag format "2.18.0" which is more common than "r2.18" for releases
-RUN git clone --depth=1 --recurse-submodules --branch=${TF_SERVING_VERSION} https://github.com/tensorflow/serving.git
+RUN git clone --depth=1 --recurse-submodules --branch=r2.18 https://github.com/tensorflow/serving.git
 
 WORKDIR /serving
 
@@ -50,7 +50,7 @@ RUN chmod +x build_config_api.sh && ./build_config_api.sh
 # #
 # # This stage creates a minimal, clean final image with FUSE support for HDFS.
 # #############################################################################
-ARG HADOOP_VERSION=2.7.7
+ARG HADOOP_VERSION=2.7.1
 ARG TENSORFLOW_SERVING_VERSION=2.18.0
 FROM tensorflow/serving:${TENSORFLOW_SERVING_VERSION}
 
