@@ -1,100 +1,63 @@
-# 基础镜像设置为 Ubuntu 22.04
-FROM ubuntu:22.04
+# 基础镜像：使用 TensorFlow Serving 2.18.0
+# 这个镜像是基于 Ubuntu 22.04 的
+FROM tensorflow/serving:2.18.0
 
-# 维护者信息
+# 作者信息（可选）
 LABEL maintainer="Your Name <your.email@example.com>"
 
-# 设置非交互式安装，避免安装过程中断
-ENV DEBIAN_FRONTEND=noninteractive
-
-# --- 环境准备与基础软件安装 ---
-
-# 更新软件包列表并安装基础依赖
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        # 网络工具
-        curl \
-        git \
-        wget \
-        # 文本编辑器
-        vim \
-        # 压缩解压工具
-        unzip \
-        tar \
-        # SSH客户端，Hadoop需要
-        openssh-client \
-        # FUSE (Filesystem in Userspace)，用于挂载HDFS
-        fuse \
-        # 其他基础工具
-        gnupg \
-        build-essential && \
-    # 清理APT缓存
-    rm -rf /var/lib/apt/lists/*
-
-# --- 安装 OpenJDK 8 ---
-
-# 安装 OpenJDK 8
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends openjdk-8-jdk && \
-    # 清理APT缓存
-    rm -rf /var/lib/apt/lists/*
-
-# 设置 JAVA_HOME 环境变量
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-
-# --- 安装 Python 3.10 ---
-
-# 安装 Python 3.10 及其开发包和pip
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        python3.10 \
-        python3.10-dev \
-        python3-pip && \
-    # 清理APT缓存
-    rm -rf /var/lib/apt/lists/* && \
-    # 更新 pip
-    python3.10 -m pip install --no-cache-dir --upgrade pip
-
-# 设置 Python 3.10 为默认 python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
-    update-alternatives --set python3 /usr/bin/python3.10
-
-
-# --- 安装 Hadoop 2.7.1 ---
-
-# 设置 Hadoop 版本和下载地址
+# --- 1. 定义构建参数 ---
+# 使用 ARG 定义版本号，方便在构建时修改或集中管理
 ARG HADOOP_VERSION=2.7.1
-ARG HADOOP_URL=https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
+ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION_SHORT=310
 
-# 下载、解压并移动 Hadoop
-RUN curl -fSL "${HADOOP_URL}" -o /tmp/hadoop.tar.gz && \
-    tar -xvf /tmp/hadoop.tar.gz -C /opt/ && \
-    rm /tmp/hadoop.tar.gz && \
-    ln -s /opt/hadoop-${HADOOP_VERSION} /opt/hadoop
+# --- 2. 设置环境变量 ---
+# DEBIAN_FRONTEND=noninteractive: 防止 apt-get 在构建过程中弹出交互式提示
+# JAVA_HOME: 指定 Java 的安装路径，Hadoop 运行需要
+# HADOOP_HOME: 指定 Hadoop 的安装目录
+# HADOOP_CONF_DIR: 指定 Hadoop 配置文件的目录，这是一个标准实践
+# PATH: 将 Hadoop 的可执行文件目录添加到系统路径中
+ENV DEBIAN_FRONTEND=noninteractive \
+    JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
+    HADOOP_HOME=/opt/hadoop \
+    HADOOP_CONF_DIR=/etc/hadoop \
+    PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin
 
-# 设置 Hadoop 相关环境变量
-ENV HADOOP_HOME=/opt/hadoop
-ENV HADOOP_CONF_DIR=/etc/hadoop
-ENV PATH=$PATH:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/hadoop/lib/native
-
-# --- 配置 Hadoop ---
-
-# 创建 Hadoop 配置目录
-RUN mkdir -p ${HADOOP_CONF_DIR}
-
-# 复制 Hadoop 默认配置文件
-RUN cp ${HADOOP_HOME}/etc/hadoop/* ${HADOOP_CONF_DIR}
-
-# 修改 hadoop-env.sh 以使用系统的 JAVA_HOME
-RUN sed -i "s#^export JAVA_HOME=.*#export JAVA_HOME=${JAVA_HOME}#" ${HADOOP_CONF_DIR}/hadoop-env.sh
-
-# 用户需在此处提供自己的 core-site.xml 和 hdfs-site.xml
-# ADD core-site.xml ${HADOOP_CONF_DIR}/
-# ADD hdfs-site.xml ${HADOOP_CONF_DIR}/
-
-
-RUN git clone --depth=1 --recurse-submodules --branch=r2.18 https://github.com/tensorflow/serving.git
+# --- 3. 安装系统依赖、Java、Python 3.10 和其他工具 ---
+# 在一个 RUN 指令中完成所有 apt 操作，以减少镜像层数
+RUN apt-get update && \
+    # 安装 software-properties-common 以便添加 PPA (用于 Python 3.10)
+    apt-get install -y --no-install-recommends software-properties-common && \
+    # 添加 deadsnakes PPA，这是获取旧版 Ubuntu 上较新 Python 版本的常用方法
+    add-apt-repository ppa:deadsnakes/ppa && \
+    # 再次更新 apt 缓存以包含新的 PPA
+    apt-get update && \
+    # 安装所有需要的软件包：
+    #   - openjdk-8-jdk: Hadoop 2.7.x 兼容性最好的 Java 版本
+    #   - python${PYTHON_VERSION}: 我们需要的新 Python 版本
+    #   - python${PYTHON_VERSION}-distutils: 安装 pip 需要
+    #   - git, curl, vim, fuse: 用户要求的工具
+    #   - libssl-dev, zlib1g-dev: 编译 Hadoop 本地库可能需要的依赖
+    apt-get install -y --no-install-recommends \
+    openjdk-8-jdk \
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-distutils \
+    git \
+    curl \
+    vim \
+    fuse \
+    libssl-dev \
+    zlib1g-dev && \
+    # --- 4. 设置 Python 3.10 为默认 Python ---
+    # 使用 update-alternatives 来管理系统中的默认 python 和 python3 命令
+    update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 && \
+    # 为新的 Python 安装 pip
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION} && \
+    # --- 5. 清理 apt 缓存 ---
+    # 删除缓存文件，减小最终镜像的体积
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /serving
 
@@ -110,37 +73,30 @@ RUN pip install --no-cache-dir \
     protobuf==4.25.3 \
     grpcio==1.64.1 \
     wheel
+COPY setup.py /serving/
 RUN chmod +x build_config_api.sh && ./build_config_api.sh
 
+# --- 6. 安装 Hadoop ---
+RUN \
+    # 创建 Hadoop 的安装目录和配置目录
+    mkdir -p ${HADOOP_HOME} && \
+    mkdir -p ${HADOOP_CONF_DIR} && \
+    # 从 Apache 归档下载指定版本的 Hadoop
+    curl -fsSL https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz \
+    | tar -xz -C /opt/ --strip-components=1 && \
+    # --- 7. 配置 Hadoop 环境 ---
+    # 在 hadoop-env.sh 中明确设置 JAVA_HOME，这是 Hadoop 启动时必须的
+    echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && \
+    # TensorFlow Serving 需要 libhdfs.so 才能访问 HDFS。
+    # 创建一个符号链接到系统的标准库路径下，这样动态链接器可以找到它，
+    # 无需再设置 LD_LIBRARY_PATH。
+    ln -s ${HADOOP_HOME}/lib/native/libhdfs.so.0.0.0 /usr/lib/libhdfs.so
 
-# --- 安装 TensorFlow Serving ---
-
-# 设置 TensorFlow Serving 版本
-ARG TF_SERVING_VERSION=2.18.0
-
-# 安装 TensorFlow Serving
-# 添加 TensorFlow Serving 发行版的 URI 作为包源
-RUN echo "deb [arch=amd64] http://storage.googleapis.com/tensorflow-serving-apt stable tensorflow-model-server tensorflow-model-server-universal" | tee /etc/apt/sources.list.d/tensorflow-serving.list && \
-    # 添加 Google Cloud public key
-    curl https://storage.googleapis.com/tensorflow-serving-apt/tensorflow-serving.release.pub.gpg | apt-key add - && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends tensorflow-model-server=${TF_SERVING_VERSION}-1 && \
-    # 清理APT缓存
-    rm -rf /var/lib/apt/lists/*
-
-# --- FUSE HDFS 挂载支持 ---
-
-# 允许非root用户挂载 FUSE
-RUN echo "user_allow_other" >> /etc/fuse.conf
-
-# 创建 HDFS 挂载点
-RUN mkdir -p /hdfs
-
-# 工作目录
-WORKDIR /
-
-# 暴露 TensorFlow Serving 的 gRPC 和 REST API 端口
+# --- 8. 暴露 TensorFlow Serving 默认端口 ---
+# gRPC 端口 和 REST API 端口
 EXPOSE 8500 8501
 
-# 默认启动命令
-CMD ["/usr/bin/tensorflow_model_server"]
+
+# 继承自基础镜像的 CMD，通常是 /usr/bin/tf_serving_entrypoint.sh
+# 我们不需要修改它，除非有特殊需求
+# CMD ["/usr/bin/tf_serving_entrypoint.sh"]
