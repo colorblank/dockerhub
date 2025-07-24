@@ -33,3 +33,6 @@ rm -rf tmp proto_source
 python3 setup.py sdist bdist_wheel
 
 ls -lh dist
+
+pip install dist/*.whl
+rm -rf build dist src *.egg-info
