@@ -90,6 +90,12 @@ RUN echo "--- Building with Build Options: ${TF_SERVING_BUILD_OPTIONS}" && \
     --verbose_failures \
     tensorflow_serving/model_servers:tensorflow_model_server
 
+# run build_config_api.sh to generate python wheel file in dist/
+COPY build_config_api.sh /serving/
+RUN chmod +x build_config_api.sh && \
+    ./build_config_api.sh
+
+
 # #############################################################################
 # # 阶段 2: 最终运行环境 (Final Image)
 # #
@@ -132,6 +138,12 @@ RUN pip install --no-cache-dir \
 # -- 从构建阶段复制产物 --
 COPY --from=builder ${HADOOP_HOME} ${HADOOP_HOME}
 COPY --from=builder /serving/bazel-bin/tensorflow_serving/model_servers/tensorflow_model_server /usr/local/bin/
+# -- 复制生成的 Python 包 --
+COPY --from=builder /serving/dist/tensorflow_serving_config-0.1.0-py3-none-any.whl /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl
+# -- 安装 Python 包 --
+RUN pip install --no-cache-dir /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl && \
+    rm /tmp/tensorflow_serving_config-0.1.0-py3-none-any.whl
+
 
 # -- 配置环境 --
 RUN mkdir -p ${HADOOP_CONF_DIR}
