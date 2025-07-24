@@ -1,3 +1,56 @@
+FROM ubuntu:20.04 AS builder
+
+LABEL stage="hadoop-builder"
+LABEL description="Builds Hadoop 2.7.1 from source on Ubuntu 20.04."
+
+# Define versions as arguments
+ARG HADOOP_VERSION=2.7.1
+ARG PROTOBUF_VERSION=2.5.0
+ARG MAVEN_VERSION=3.3.9
+ARG MAVEN_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz
+ARG HADOOP_URL=https://archive.apache.org/dist/hadoop/core/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}-src.tar.gz
+ARG PROTOBUF_URL=https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/protobuf-${PROTOBUF_VERSION}.tar.gz
+
+# Set Environment Variables for the build
+ENV DEBIAN_FRONTEND=noninteractive
+# Hadoop 2.7.1 is most compatible with Java 8
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV M2_HOME=/opt/maven
+ENV PATH=$M2_HOME/bin:$JAVA_HOME/bin:$PATH
+ENV HADOOP_SRC_HOME=/usr/src/hadoop-${HADOOP_VERSION}-src
+
+# Install all build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      wget tar gzip \
+      openjdk-8-jdk \
+      build-essential autoconf automake libtool cmake \
+      fuse libfuse-dev \
+      zlib1g-dev libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Protocol Buffers v2.5.0 from source
+RUN cd /tmp && \
+    wget -q ${PROTOBUF_URL} && \
+    tar -xzvf protobuf-${PROTOBUF_VERSION}.tar.gz && \
+    cd protobuf-${PROTOBUF_VERSION} && \
+    ./configure --prefix=/usr && make && make install && ldconfig && \
+    cd / && rm -rf /tmp/* && protoc --version
+
+# Install Maven
+RUN wget -q ${MAVEN_URL} -P /tmp && \
+    tar -xzvf /tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
+    ln -s /opt/apache-maven-${MAVEN_VERSION} ${M2_HOME} && \
+    rm -f /tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz
+
+# Download, extract, and build Hadoop with native libraries
+RUN mkdir -p ${HADOOP_SRC_HOME} && \
+    wget -q ${HADOOP_URL} -P ${HADOOP_SRC_HOME} && \
+    tar -xzvf ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz -C ${HADOOP_SRC_HOME} --strip-components=1 && \
+    rm -f ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz
+WORKDIR ${HADOOP_SRC_HOME}
+RUN mvn package -Pdist,native -DskipTests -Dtar
+
 # 基础镜像：使用 TensorFlow Serving 2.18.0
 # 这个镜像是基于 Ubuntu 22.04 的
 FROM tensorflow/serving:2.18.0
@@ -23,6 +76,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     HADOOP_CONF_DIR=/etc/hadoop \
     PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin
 
+# Switch to root user to install packages and copy files
+USER root
+
 # --- 3. 安装系统依赖、Java、Python 3.10 和其他工具 ---
 # 在一个 RUN 指令中完成所有 apt 操作，以减少镜像层数
 RUN apt-get update && \
@@ -46,7 +102,7 @@ RUN apt-get update && \
     curl \
     vim \
     fuse \
-    hadoop-hdfs-fuse \
+    libssl1.1  \
     libssl-dev \
     zlib1g-dev && \
     # --- 4. 设置 Python 3.10 为默认 Python ---
@@ -80,13 +136,9 @@ COPY setup.py test.py build_config_api.sh /serving/
 RUN chmod +x build_config_api.sh && ./build_config_api.sh
 
 # --- 6. 安装 Hadoop ---
+COPY --from=builder /usr/src/hadoop-2.7.1-src/hadoop-dist/target/hadoop-2.7.1 /opt/hadoop
+
 RUN \
-    # 创建 Hadoop 的安装目录和配置目录
-    mkdir -p ${HADOOP_HOME} && \
-    mkdir -p ${HADOOP_CONF_DIR} && \
-    # 从 Apache 归档下载指定版本的 Hadoop 并解压到正确的目录
-    curl -fsSL https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz \
-    | tar -xz -C ${HADOOP_HOME} --strip-components=1 && \
     # --- 7. 配置 Hadoop 环境 ---
     # 在 hadoop-env.sh 中明确设置 JAVA_HOME
     echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && \
