@@ -50,10 +50,8 @@ RUN chmod +x build_config_api.sh && ./build_config_api.sh
 # #
 # # This stage creates a minimal, clean final image with FUSE support for HDFS.
 # #############################################################################
+FROM tensorflow/serving:2.18.0
 ARG HADOOP_VERSION=2.7.1
-ARG TENSORFLOW_SERVING_VERSION=2.18.0
-FROM tensorflow/serving:${TENSORFLOW_SERVING_VERSION}
-
 # -- Set Core Environment Variables --
 ENV DEBIAN_FRONTEND=noninteractive \
     JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
