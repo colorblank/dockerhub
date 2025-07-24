@@ -28,6 +28,11 @@ RUN apt-get update && \
       zlib1g-dev libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# =========================================================================
+# === ✨ THE NEW FIX: Help CMake find the Java VM library ===============
+# =========================================================================
+RUN ln -s $JAVA_HOME/jre/lib/amd64/server/libjvm.so $JAVA_HOME/jre/lib/amd64/libjvm.so
+
 # Install Protocol Buffers v2.5.0 from source
 RUN cd /tmp && \
     wget -q ${PROTOBUF_URL} && \
@@ -42,13 +47,19 @@ RUN wget -q ${MAVEN_URL} -P /tmp && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} ${M2_HOME} && \
     rm -f /tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz
 
-# Download, extract, and build Hadoop. This will now succeed.
+# Download and extract Hadoop source
 RUN mkdir -p ${HADOOP_SRC_HOME} && \
     wget -q ${HADOOP_URL} -P ${HADOOP_SRC_HOME} && \
     tar -xzvf ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz -C ${HADOOP_SRC_HOME} --strip-components=1 && \
     rm -f ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz
+
+# Set the working directory for the build
 WORKDIR ${HADOOP_SRC_HOME}
+
+# Build Hadoop with native libraries. This should now complete.
 RUN mvn package -Pdist,native -DskipTests -Dtar
+
+
 # 基础镜像：使用 TensorFlow Serving 2.18.0
 # 这个镜像是基于 Ubuntu 20.04 的
 FROM tensorflow/serving:2.18.0
