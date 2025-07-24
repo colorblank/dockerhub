@@ -35,4 +35,6 @@ python3 setup.py sdist bdist_wheel
 ls -lh dist
 
 pip install dist/*.whl
+
+python test.py
 rm -rf build dist src *.egg-info

@@ -63,7 +63,6 @@ WORKDIR /serving
 
 # -- Build the Python Wheel --
 # This script seems to be custom. Ensure it's in the build context.
-COPY build_config_api.sh /serving/
 RUN pip install --no-cache-dir \
     pyarrow \
     filelock \
@@ -72,8 +71,11 @@ RUN pip install --no-cache-dir \
     dacite \
     protobuf==4.25.3 \
     grpcio==1.64.1 \
+    grpcio-tools==1.64.1 \
     wheel
-COPY setup.py /serving/
+
+# 复制 setup.py, test.py, build_config_api 文件到工作目录，并安装 Python 包
+COPY setup.py test.py build_config_api.sh /serving/
 RUN chmod +x build_config_api.sh && ./build_config_api.sh
 
 # --- 6. 安装 Hadoop ---
