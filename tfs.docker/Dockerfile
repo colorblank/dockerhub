@@ -48,6 +48,10 @@ RUN mkdir -p ${HADOOP_SRC_HOME} && \
     wget -q ${HADOOP_URL} -P ${HADOOP_SRC_HOME} && \
     tar -xzvf ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz -C ${HADOOP_SRC_HOME} --strip-components=1 && \
     rm -f ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz
+RUN sed -i -e '/#include "exception.h"/a #include <errno.h>' \
+    ${HADOOP_SRC_HOME}/hadoop-common-project/hadoop-common/src/main/native/src/exception.c
+
+
 WORKDIR ${HADOOP_SRC_HOME}
 RUN mvn package -Pdist,native -DskipTests -Dtar
 
