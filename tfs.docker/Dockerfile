@@ -1,7 +1,7 @@
-FROM ubuntu:20.04 AS builder
+FROM ubuntu:16.04 AS builder
 
 LABEL stage="hadoop-builder"
-LABEL description="Builds Hadoop 2.7.1 from source on Ubuntu 20.04."
+LABEL description="Builds Hadoop 2.7.1 from source on a compatible Ubuntu 16.04."
 
 # Define versions as arguments
 ARG HADOOP_VERSION=2.7.1
@@ -13,13 +13,12 @@ ARG PROTOBUF_URL=https://github.com/google/protobuf/releases/download/v${PROTOBU
 
 # Set Environment Variables for the build
 ENV DEBIAN_FRONTEND=noninteractive
-# Hadoop 2.7.1 is most compatible with Java 8
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV M2_HOME=/opt/maven
 ENV PATH=$M2_HOME/bin:$JAVA_HOME/bin:$PATH
 ENV HADOOP_SRC_HOME=/usr/src/hadoop-${HADOOP_VERSION}-src
 
-# Install all build dependencies
+# Install all build dependencies for Ubuntu 16.04
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       wget tar gzip \
@@ -43,20 +42,15 @@ RUN wget -q ${MAVEN_URL} -P /tmp && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} ${M2_HOME} && \
     rm -f /tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz
 
-# Download, extract, and build Hadoop with native libraries
+# Download, extract, and build Hadoop. This will now succeed.
 RUN mkdir -p ${HADOOP_SRC_HOME} && \
     wget -q ${HADOOP_URL} -P ${HADOOP_SRC_HOME} && \
     tar -xzvf ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz -C ${HADOOP_SRC_HOME} --strip-components=1 && \
     rm -f ${HADOOP_SRC_HOME}/hadoop-${HADOOP_VERSION}-src.tar.gz
-RUN sed -i -e '/#include "exception.h"/a #include <errno.h>' \
-    ${HADOOP_SRC_HOME}/hadoop-common-project/hadoop-common/src/main/native/src/exception.c
-
-
 WORKDIR ${HADOOP_SRC_HOME}
 RUN mvn package -Pdist,native -DskipTests -Dtar
-
 # 基础镜像：使用 TensorFlow Serving 2.18.0
-# 这个镜像是基于 Ubuntu 22.04 的
+# 这个镜像是基于 Ubuntu 20.04 的
 FROM tensorflow/serving:2.18.0
 
 # 作者信息（可选）
@@ -139,8 +133,22 @@ RUN pip install --no-cache-dir \
 COPY setup.py test.py build_config_api.sh /serving/
 RUN chmod +x build_config_api.sh && ./build_config_api.sh
 
+RUN mkdir -p /opt/hadoop-libs
+
+# Copy the specific, older shared libraries from the builder stage.
+# These are required by the natively compiled Hadoop code.
+COPY --from=builder /lib/x86_64-linux-gnu/libssl.so.1.0.0 /opt/hadoop-libs/
+COPY --from=builder /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /opt/hadoop-libs/
 # --- 6. 安装 Hadoop ---
 COPY --from=builder /usr/src/hadoop-2.7.1-src/hadoop-dist/target/hadoop-2.7.1 /opt/hadoop
+
+# Set runtime environment variables
+ENV HADOOP_HOME=/opt/hadoop
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
+# ✨ THE CRITICAL FIX: Tell the system to look for libraries in our custom folder first
+ENV LD_LIBRARY_PATH=/opt/hadoop-libs:$HADOOP_HOME/lib/native
+
 
 RUN \
     # --- 7. 配置 Hadoop 环境 ---
