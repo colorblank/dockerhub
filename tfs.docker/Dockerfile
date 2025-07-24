@@ -81,15 +81,13 @@ RUN \
     # 创建 Hadoop 的安装目录和配置目录
     mkdir -p ${HADOOP_HOME} && \
     mkdir -p ${HADOOP_CONF_DIR} && \
-    # 从 Apache 归档下载指定版本的 Hadoop
+    # 从 Apache 归档下载指定版本的 Hadoop 并解压到正确的目录
     curl -fsSL https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz \
-    | tar -xz -C /opt/ --strip-components=1 && \
+    | tar -xz -C ${HADOOP_HOME} --strip-components=1 && \
     # --- 7. 配置 Hadoop 环境 ---
-    # 在 hadoop-env.sh 中明确设置 JAVA_HOME，这是 Hadoop 启动时必须的
+    # 在 hadoop-env.sh 中明确设置 JAVA_HOME
     echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_HOME}/etc/hadoop/hadoop-env.sh && \
-    # TensorFlow Serving 需要 libhdfs.so 才能访问 HDFS。
-    # 创建一个符号链接到系统的标准库路径下，这样动态链接器可以找到它，
-    # 无需再设置 LD_LIBRARY_PATH。
+    # 创建 libhdfs.so 的符号链接，供 TensorFlow Serving 调用
     ln -s ${HADOOP_HOME}/lib/native/libhdfs.so.0.0.0 /usr/lib/libhdfs.so
 
 # --- 8. 暴露 TensorFlow Serving 默认端口 ---
