@@ -57,7 +57,7 @@ RUN apt-get update && \
 
 # 设置 Python 3.10 为默认 python
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
-    update-alternatives --set python3 /usr/bin/python3 
+    update-alternatives --set python3 /usr/bin/python3.10
 
 
 # --- 安装 Hadoop 2.7.1 ---
@@ -76,7 +76,7 @@ RUN curl -fSL "${HADOOP_URL}" -o /tmp/hadoop.tar.gz && \
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=/etc/hadoop
 ENV PATH=$PATH:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HADOOP_HOME}/lib/native
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/hadoop/lib/native
 
 # --- 配置 Hadoop ---
 
