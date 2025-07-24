@@ -71,7 +71,7 @@ RUN pip install --no-cache-dir \
     dacite \
     protobuf==4.25.3 \
     grpcio==1.64.1 \
-    grpcio-tools==1.64.1 \
+    grpcio-tools \
     wheel
 
 # 复制 setup.py, test.py, build_config_api 文件到工作目录，并安装 Python 包
