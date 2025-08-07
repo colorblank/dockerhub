@@ -10,6 +10,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,16 +44,32 @@ jobs:
           echo "  UBUNTU_VERSION: ${UBUNTU_VERSION}"
           echo "  PYTHON_VERSION: ${PYTHON_VERSION}"
 
-      - name: Build and push Docker image
+      - name: Build and push RecSys Base Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./recsys.docker
-          file: ./recsys.docker/Dockerfile
+          file: ./recsys.docker/Dockerfile.base
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/recsys:latest
-            ghcr.io/${{ github.repository_owner }}/recsys:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/recsys:cuda${{ env.CUDA_VERSION }}-cudnn${{ env.CUDNN_VERSION }}-ubuntu${{ env.UBUNTU_VERSION }}-python${{ env.PYTHON_VERSION }}
+            ghcr.io/${{ github.repository_owner }}/recsys/base:latest
+            ghcr.io/${{ github.repository_owner }}/recsys/base:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/recsys/base:cuda${{ env.CUDA_VERSION }}-cudnn${{ env.CUDNN_VERSION }}-ubuntu${{ env.UBUNTU_VERSION }}-py${{ env.PYTHON_VERSION }}
+          build-args: |
+            CUDA_VERSION=${{ env.CUDA_VERSION }}
+            CUDNN_VERSION=${{ env.CUDNN_VERSION }}
+            UBUNTU_VERSION=${{ env.UBUNTU_VERSION }}
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+
+      - name: Build and push RecSys Full Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./recsys.docker
+          file: ./recsys.docker/Dockerfile.full
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/recsys/full:latest
+            ghcr.io/${{ github.repository_owner }}/recsys/full:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/recsys/full:cuda${{ env.CUDA_VERSION }}-cudnn${{ env.CUDNN_VERSION }}-ubuntu${{ env.UBUNTU_VERSION }}-py${{ env.PYTHON_VERSION }}
           build-args: |
             CUDA_VERSION=${{ env.CUDA_VERSION }}
             CUDNN_VERSION=${{ env.CUDNN_VERSION }}
