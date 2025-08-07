@@ -87,9 +87,4 @@ RUN uv pip compile requirements.in -o requirements.txt && \
 # --- 设置工作目录 ---
 WORKDIR /app
 
-# --- 拷贝启动脚本并设置权限 ---
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
-# --- 设置容器启动命令 ---
-ENTRYPOINT ["/usr/local/bin/start.sh"]
+CMD ["/bin/bash"]
