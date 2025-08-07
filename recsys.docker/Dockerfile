@@ -9,7 +9,7 @@ ARG CUDNN_VERSION=8
 ARG UBUNTU_VERSION=22.04
 
 # ==================================================================
-# Stage 1: builder (Corrected)
+# Stage 1: builder
 # ==================================================================
 FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS builder
 
@@ -20,7 +20,7 @@ ARG PYTHON_VERSION
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC
 
-# FIX: 添加 'deadsnakes' PPA 以获取所有 Python 版本
+# 添加 'deadsnakes' PPA 以获取所有 Python 版本
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
@@ -48,8 +48,11 @@ RUN uv venv --python "python${PYTHON_VERSION}" "${VENV_PATH}" && \
 
 # ==================================================================
 # Stage 2: final (Corrected)
+#
+# FIX: 使用 'runtime' 镜像替换不存在的 'base' 镜像。
+# 'runtime' 镜像包含运行应用所需的库，但没有编译工具，是理想的最终镜像。
 # ==================================================================
-FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-base-ubuntu${UBUNTU_VERSION}
+FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-runtime-ubuntu${UBUNTU_VERSION}
 
 # 声明构建参数
 ARG PYTHON_VERSION
@@ -61,7 +64,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
 
-# FIX: 添加 'deadsnakes' PPA 以获取所有 Python 版本
+# 添加 'deadsnakes' PPA 并安装 Python 运行时
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
