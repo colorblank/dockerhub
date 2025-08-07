@@ -41,11 +41,10 @@ ARG VENV_PATH="/opt/venv"
 
 # # 创建虚拟环境并安装 Python 包
 # COPY requirements.in .
-# RUN uv venv --python "python${PYTHON_VERSION}" "${VENV_PATH}" && \
-#     . "${VENV_PATH}/bin/activate" && \
-#     uv pip compile requirements.in -o requirements.txt && \
-#     uv pip install --no-cache-dir -r requirements.txt
-RUN uv pip install jupyterlab
+RUN uv venv --python "python${PYTHON_VERSION}" "${VENV_PATH}" && \
+    . "${VENV_PATH}/bin/activate" && \
+    uv pip install --no-cache-dir  jupyterlab
+
 # ==================================================================
 # Stage 2: final (Corrected)
 #
