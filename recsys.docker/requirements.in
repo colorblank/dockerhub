@@ -9,8 +9,7 @@ scikit-learn
 scipy
 
 # === 推荐算法模型库 ===
-# LightFM 用于实现混合矩阵分解模型
-lightfm
+lightgbm
 # Transformers 用于构建序列感知推荐模型 (e.g., BERT4Rec)
 transformers
 
