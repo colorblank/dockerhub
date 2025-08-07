@@ -49,7 +49,7 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 # --- 使用 uv 高效安装所有 Python 包 ---
 # 拷贝需求文件并一次性安装，以充分利用 Docker 的层缓存机制
 COPY requirements.in .
-RUN uv compile requirements.in -o requirements.txt
+RUN uv pip compile requirements.in -o requirements.txt
 RUN uv pip install --no-cache-dir -r requirements.txt
 
 
@@ -83,13 +83,15 @@ RUN apt-get update && \
     # Version Control
     git \
     # Networking
-    curl wget iputils-ping net-tools dnsutils openssh-client \
-    # Monitoring
-    procps htop iotop lsof \
+    curl wget iputils-ping netcat openssh-client iproute2 dnsutils \
+    # Monitoring & Debugging
+    procps htop iotop lsof tmux strace gdb \
     # File & Editing
-    vim nano mc tree findutils \
+    vim nano mc tree findutils less jq ncdu \
     # Compression
     zip unzip p7zip-full \
+    # Build Tools
+    build-essential \
     # User & Shell
     sudo bash-completion man-db \
     && apt-get clean && \
