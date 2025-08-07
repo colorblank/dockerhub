@@ -44,6 +44,7 @@ RUN apt-get update && \
     python3.11 python3.11-dev python3.11-venv \
     python3.12 python3.12-dev python3.12-venv \
     # --- 基础工具和调试工具 ---
+    python3-pip \
     ca-certificates locales wget iputils-ping netcat openssh-client iproute2 dnsutils \
     procps htop iotop lsof tmux strace gdb \
     vim nano mc tree findutils less jq ncdu \
@@ -61,7 +62,8 @@ RUN apt-get update && \
     locale-gen en_US.UTF-8 && \
     # --- 清理 apt 缓存 ---
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    ln -s /usr/bin/python3 /usr/bin/python
 
 # --- 安装并配置 uv ---
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
