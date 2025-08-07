@@ -1,0 +1,43 @@
+# === 核心框架 ===
+tensorflow==2.18.0
+torch==2.5.1
+
+# === 数据科学与处理 ===
+pandas
+numpy
+scikit-learn
+scipy
+
+# === 推荐算法模型库 ===
+# LightFM 用于实现混合矩阵分解模型
+lightfm
+# Transformers 用于构建序列感知推荐模型 (e.g., BERT4Rec)
+transformers
+
+# === 性能与大规模数据处理 ===
+# PyArrow 用于高效的内存数据格式和 I/O
+pyarrow
+# Numba 用于通过 JIT 编译加速 Python 代码
+numba
+# Polars 是一个极速的 DataFrame 库，pandas 的强大补充
+polars
+# Dask 用于并行计算，扩展 pandas/numpy 处理大数据集
+dask[complete]
+
+# === MLOps, 优化与可解释性 ===
+# Optuna 用于高效的超参数优化
+optuna
+# Hydra 用于优雅地管理复杂的实验配置
+hydra-core
+# SHAP 用于模型的可解释性分析
+shap
+
+# === 可交互开发与可视化 ===
+jupyterlab
+matplotlib
+seaborn
+tqdm
+
+# === API 服务 (用于模型部署) ===
+fastapi
+uvicorn[standard]

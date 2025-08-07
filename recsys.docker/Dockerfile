@@ -48,7 +48,8 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 # --- 使用 uv 高效安装所有 Python 包 ---
 # 拷贝需求文件并一次性安装，以充分利用 Docker 的层缓存机制
-COPY requirements.txt .
+COPY requirements.in .
+RUN uv compile requirements.in -o requirements.txt
 RUN uv pip install --no-cache-dir -r requirements.txt
 
 
