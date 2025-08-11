@@ -36,7 +36,7 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     # --- 构建工具 ---
-    git curl build-essential cmake pkg-config \
+    build-essential cmake curl git pkg-config \
     # --- 多版本 Python 运行时 (从 PPA 安装) ---
     python3.8 python3.8-dev python3.8-venv \
     python3.9 python3.9-dev python3.9-venv \
@@ -44,12 +44,11 @@ RUN apt-get update && \
     python3.11 python3.11-dev python3.11-venv \
     python3.12 python3.12-dev python3.12-venv \
     # --- 基础工具和调试工具 ---
-    python3-pip \
-    ca-certificates locales wget iputils-ping netcat openssh-client iproute2 dnsutils \
-    procps htop iotop lsof tmux strace gdb \
-    vim nano mc tree findutils less jq ncdu \
-    zip unzip p7zip-full \
-    sudo bash-completion man-db && \
+    bash-completion ca-certificates dnsutils findutils gdb \
+    htop iotop iproute2 iputils-ping jq less lsof \
+    locales man-db mc nano ncdu netcat openssh-client \
+    p7zip-full procps python3-pip strace sudo tmux \
+    tree unzip vim wget zip && \
     # --- 设置指定的 Python 版本为全局默认 ---
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 80 && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 90 && \
@@ -66,25 +65,7 @@ RUN apt-get update && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # --- 安装并配置 uv ---
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:${PATH}"
-
-# --- 创建所有 Python 版本的虚拟环境 ---
-RUN uv venv --python python3.8 /opt/venv_py38 && \
-    uv venv --python python3.9 /opt/venv_py39 && \
-    uv venv --python python3.10 /opt/venv_py310 && \
-    uv venv --python python3.11 /opt/venv_py311 && \
-    uv venv --python python3.12 /opt/venv_py312
-
-# --- 激活由 ARG 指定的默认 Python 虚拟环境 ---
-ENV VENV_PATH="/opt/venv_py${PYTHON_VERSION//./}"
-ENV PATH="${VENV_PATH}/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${VENV_PATH}/lib/python${PYTHON_VERSION}/site-packages/tensorrt_libs:${LD_LIBRARY_PATH}"
-
-# --- 使用 uv 高效安装所有 Python 包到默认虚拟环境中 ---
-COPY requirements.in .
-RUN uv pip compile requirements.in -o requirements.txt && \
-    uv pip install --no-cache-dir -r requirements.txt
+RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALL_DIR=/usr/local/bin sh
 
 # --- 设置工作目录 ---
 WORKDIR /app
