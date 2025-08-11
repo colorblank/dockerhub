@@ -1,0 +1,21 @@
+
+# ==================================================================
+# 定义可配置的构建参数
+# ==================================================================
+ARG PYTHON_VERSION=3.10
+ARG CUDA_VERSION=12.1.1
+ARG CUDNN_VERSION=8
+ARG UBUNTU_VERSION=22.04
+
+# FROM ghcr.io/colorblank/recsys:cuda12.1.1-cudnn8-ubuntu22.04-py3.10
+FROM ghcr.io/colorblank/recsys:cuda${CUDA_VERSION}-cudnn${CUDNN_VERSION}-ubuntu${UBUNTU_VERSION}-py${PYTHON_VERSION}
+
+# uv pip compile requirements.in, install
+COPY requirements.in /tmp/requirements.in
+WORKDIR /tmp
+RUN uv pip compile requirements.in && \
+    uv pip install -r requirements.txt
+
+WORKDIR /app
+
+CMD [ "/bin/bash" ]

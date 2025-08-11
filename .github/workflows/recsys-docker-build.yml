@@ -44,11 +44,11 @@ jobs:
           echo "  UBUNTU_VERSION: ${UBUNTU_VERSION}"
           echo "  PYTHON_VERSION: ${PYTHON_VERSION}"
 
-      - name: Build and push RecSys Docker image
+      - name: Build and push RecSys Docker base image
         uses: docker/build-push-action@v5
         with:
           context: ./recsys.docker
-          file: ./recsys.docker/Dockerfile
+          file: ./recsys.docker/Dockerfile.base
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/recsys:latest
@@ -59,3 +59,4 @@ jobs:
             CUDNN_VERSION=${{ env.CUDNN_VERSION }}
             UBUNTU_VERSION=${{ env.UBUNTU_VERSION }}
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+        

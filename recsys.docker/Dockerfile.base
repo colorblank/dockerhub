@@ -66,6 +66,7 @@ RUN apt-get update && \
 
 # --- 安装并配置 uv, ruff ---
 ENV UV_INSTALL_DIR="/usr/local/bin"
+ENV UV_TOOL_BIN_DIR="/usr/local/bin"
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh && \
     uv tool install ruff@latest
 
