@@ -65,6 +65,7 @@ RUN apt-get update && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # --- 安装并配置 uv, ruff ---
+ENV UV_INSTALL_DIR="/usr/local/bin"
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh && \
     uv tool install ruff@latest
 
