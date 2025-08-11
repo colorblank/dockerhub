@@ -65,7 +65,7 @@ RUN apt-get update && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # --- 安装并配置 uv ---
-RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALL_DIR=/usr/local/bin sh
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh 
 
 # --- 设置工作目录 ---
 WORKDIR /app
