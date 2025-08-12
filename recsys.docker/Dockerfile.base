@@ -8,14 +8,6 @@ ARG CUDA_VERSION=12.1.1
 ARG CUDNN_VERSION=8
 ARG UBUNTU_VERSION=22.04
 
-
-# ==================================================================
-# Stage: Single Stage Development Build
-#
-# 目标: 创建一个功能齐全的开发环境，包含所有必需的开发工具、
-# CUDA SDK、以及多版本的 Python 环境。
-# ==================================================================
-# 使用 '-devel' 镜像，它包含了完整的 CUDA SDK (编译器、库、头文件)
 FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu${UBUNTU_VERSION}
 
 # 声明构建参数
