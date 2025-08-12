@@ -28,10 +28,10 @@ jobs:
         id: docker_vars
         run: |
           # Extract ARG values from Dockerfile (assuming they are on single lines)
-          CUDA_VERSION=$(grep -m 1 '^ARG CUDA_VERSION=' recsys.docker/Dockerfile | cut -d'=' -f2)
-          CUDNN_VERSION=$(grep -m 1 '^ARG CUDNN_VERSION=' recsys.docker/Dockerfile | cut -d'=' -f2)
-          UBUNTU_VERSION=$(grep -m 1 '^ARG UBUNTU_VERSION=' recsys.docker/Dockerfile | cut -d'=' -f2)
-          PYTHON_VERSION=$(grep -m 1 '^ARG PYTHON_VERSION=' recsys.docker/Dockerfile | cut -d'=' -f2)
+          CUDA_VERSION=$(grep -m 1 '^ARG CUDA_VERSION=' recsys.docker/Dockerfile.base | cut -d'=' -f2)
+          CUDNN_VERSION=$(grep -m 1 '^ARG CUDNN_VERSION=' recsys.docker/Dockerfile.base | cut -d'=' -f2)
+          UBUNTU_VERSION=$(grep -m 1 '^ARG UBUNTU_VERSION=' recsys.docker/Dockerfile.base | cut -d'=' -f2)
+          PYTHON_VERSION=$(grep -m 1 '^ARG PYTHON_VERSION=' recsys.docker/Dockerfile.base | cut -d'=' -f2)
 
           echo "CUDA_VERSION=${CUDA_VERSION}" >> $GITHUB_ENV
           echo "CUDNN_VERSION=${CUDNN_VERSION}" >> $GITHUB_ENV
@@ -59,4 +59,19 @@ jobs:
             CUDNN_VERSION=${{ env.CUDNN_VERSION }}
             UBUNTU_VERSION=${{ env.UBUNTU_VERSION }}
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-        
+
+      - name: Build and push RecSys Docker full image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./recsys.docker
+          file: ./recsys.docker/Dockerfile.full
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/recsys-full:latest
+            ghcr.io/${{ github.repository_owner }}/recsys-full:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/recsys-full:cuda${{ env.CUDA_VERSION }}-cudnn${{ env.CUDNN_VERSION }}-ubuntu${{ env.UBUNTU_VERSION }}-py${{ env.PYTHON_VERSION }}
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            CUDA_VERSION=${{ env.CUDA_VERSION }}
+            CUDNN_VERSION=${{ env.CUDNN_VERSION }}
+            UBUNTU_VERSION=${{ env.UBUNTU_VERSION }}
