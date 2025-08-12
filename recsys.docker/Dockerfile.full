@@ -13,7 +13,7 @@ FROM ghcr.io/colorblank/recsys:cuda${CUDA_VERSION}-cudnn${CUDNN_VERSION}-ubuntu$
 # uv pip compile requirements.in, install
 COPY requirements.in /tmp/requirements.in
 WORKDIR /tmp
-RUN uv pip compile requirements.in && \
+RUN uv pip compile requirements.in -o requirements.txt && \
     uv pip install -r requirements.txt
 
 WORKDIR /app
