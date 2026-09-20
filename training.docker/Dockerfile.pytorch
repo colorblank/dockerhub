@@ -13,7 +13,7 @@
 #   training-pytorch:2.7-py312-cu126
 # ==================================================================
 # 上一层的 base 镜像名由 CI 计算后传入；默认给出一个可用值。
-ARG BASE_IMAGE=ghcr.io/colorblank/training-base:cuda12.4.1-cudnn9-ubuntu22.04-py3.12
+ARG BASE_IMAGE=ghcr.io/colorblank/training-base:cuda12.4.1-ubuntu22.04-py3.12
 FROM ${BASE_IMAGE}
 
 ARG TORCH_VERSION=2.6.0
