@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+
+# ==================================================================
+# training-base —— 公司级 A800 训练基础镜像（第一层）
+# CUDA/cuDNN/NCCL + Python + uv + 编译工具。
+# 不含 torch，torch 见 Dockerfile.pytorch。
+#
+# 关键约定：
+#   统一 Python 虚拟环境 /opt/venv，后续所有 Python 依赖都装进它，
+#   业务镜像不再新建 venv，从而真正复用 base 中预装的 torch。
+# ==================================================================
+ARG PYTHON_VERSION=3.12
+ARG CUDA_VERSION=12.4.1
+ARG CUDNN_VERSION=9
+ARG UBUNTU_VERSION=22.04
+
+FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+
+ARG PYTHON_VERSION
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Etc/UTC \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    UV_INSTALL_DIR=/usr/local/bin \
+    UV_TOOL_BIN_DIR=/usr/local/bin \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:/usr/local/bin:$PATH"
+
+# --- 系统依赖：编译工具 + 常用调试/运维工具 ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build pkg-config git ca-certificates curl \
+    bash-completion htop jq lsof locales netcat-openbsd openssh-client \
+    procps strace sudo tmux tree unzip vim wget \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- uv：唯一的 Python 包管理器 ---
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# --- 托管 Python + 建立 /opt/venv ---
+RUN uv python install ${PYTHON_VERSION}
+RUN uv venv /opt/venv --python ${PYTHON_VERSION}
+
+WORKDIR /app
+
+CMD ["/bin/bash"]

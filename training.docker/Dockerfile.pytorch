@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+# ==================================================================
+# training-pytorch —— 公司级 A800 训练镜像（第二层）
+# 在 training-base 之上，把固定版本 PyTorch 预装进 /opt/venv。
+# 业务镜像直接 FROM 本镜像并用同 /opt/venv 追加依赖，
+# 不再重复下载几 GB 的 torch/CUDA wheel。
+#
+# 版本固定由构建参数决定，训练 Job 应固定到具体 tag（而非 latest），
+# 更进一步可固定 image digest 以保证可复现。
+# 版本矩阵建议（保持三方 torch/torchvision/torchaudio 同步）：
+#   training-pytorch:2.6-py312-cu124
+#   training-pytorch:2.7-py312-cu126
+# ==================================================================
+# 上一层的 base 镜像名由 CI 计算后传入；默认给出一个可用值。
+ARG BASE_IMAGE=ghcr.io/colorblank/training-base:cuda12.4.1-cudnn9-ubuntu22.04-py3.12
+FROM ${BASE_IMAGE}
+
+ARG TORCH_VERSION=2.6.0
+ARG TORCHVISION_VERSION=0.21.0
+ARG TORCHAUDIO_VERSION=2.6.0
+ARG PYTORCH_INDEX=https://download.pytorch.org/whl/cu124
+
+# PyTorch 预装进 /opt/venv（继承 base 的 VIRTUAL_ENV），与业务依赖同环境。
+RUN uv pip install \
+    "torch==${TORCH_VERSION}" \
+    "torchvision==${TORCHVISION_VERSION}" \
+    "torchaudio==${TORCHAUDIO_VERSION}" \
+    --index-url ${PYTORCH_INDEX} \
+    && uv cache clean
+
+WORKDIR /app
+CMD ["/bin/bash"]
