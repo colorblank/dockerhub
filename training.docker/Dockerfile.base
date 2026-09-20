@@ -36,6 +36,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- uv：唯一的 Python 包管理器 ---
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
+# --- Node.js 24 LTS（pi coding agent 运行时要求 node >=22.19.0）---
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # --- 托管 Python + 建立 /opt/venv ---
 RUN uv python install ${PYTHON_VERSION}
 RUN uv venv /opt/venv --python ${PYTHON_VERSION}
