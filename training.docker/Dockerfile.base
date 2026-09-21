@@ -24,7 +24,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     UV_INSTALL_DIR=/usr/local/bin \
     UV_TOOL_BIN_DIR=/usr/local/bin \
     VIRTUAL_ENV=/opt/venv \
-    PATH="/opt/venv/bin:/usr/local/bin:$PATH"
+    PATH="/opt/venv/bin:/root/.cargo/bin:/usr/local/bin:$PATH"
 
 # --- 系统依赖：编译工具 + 常用调试/运维工具 ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,6 +40,13 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- Rust 工具链（rustup minimal）+ Zellij 终端多路复用器 ---
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+    && export PATH="/root/.cargo/bin:$PATH" \
+    && curl -fsSL https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz \
+       | tar -xz -C /usr/local/bin \
+    && rustup --version && cargo --version && zellij --version
 
 # --- 托管 Python + 建立 /opt/venv ---
 RUN uv python install ${PYTHON_VERSION}
