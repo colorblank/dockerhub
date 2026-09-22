@@ -19,8 +19,11 @@ ARG PYTHON_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC \
-    LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    PYTHONUTF8=1 \
+    PYTHONIOENCODING=utf-8 \
     UV_INSTALL_DIR=/usr/local/bin \
     UV_TOOL_BIN_DIR=/usr/local/bin \
     VIRTUAL_ENV=/opt/venv \
@@ -33,6 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps strace sudo tmux tree unzip vim wget \
     ripgrep fd-find bat fzf gh git-lfs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- 生成并启用完整 UTF-8 locale（支持中文等非 ASCII 字符）---
+RUN locale-gen en_US.UTF-8
 
 # --- uv：唯一的 Python 包管理器 ---
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
