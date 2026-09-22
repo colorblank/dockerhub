@@ -48,6 +48,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
        | tar -xz -C /usr/local/bin \
     && rustup --version && cargo --version && zellij --version
 
+# --- ble.sh（Bash 命令行编辑器，最新 master）---
+RUN git clone --depth 1 --quiet https://github.com/akinomyoga/ble.sh.git /tmp/ble \
+    && make -C /tmp/ble install PREFIX=/usr/local >/dev/null \
+    && rm -rf /tmp/ble \
+    && echo '[[ \$- == *i* ]] && source /usr/local/share/blesh/ble.sh' >> /root/.bashrc
+
 # --- 托管 Python + 建立 /opt/venv ---
 RUN uv python install ${PYTHON_VERSION}
 RUN uv venv /opt/venv --python ${PYTHON_VERSION}
