@@ -28,7 +28,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # --- 系统依赖：编译工具 + 常用调试/运维工具 ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build pkg-config git ca-certificates curl \
+    build-essential cmake ninja-build pkg-config gawk git ca-certificates curl \
     bash-completion htop jq lsof locales netcat-openbsd openssh-client \
     procps strace sudo tmux tree unzip vim wget \
     ripgrep fd-find bat fzf gh git-lfs \
