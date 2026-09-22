@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build pkg-config git ca-certificates curl \
     bash-completion htop jq lsof locales netcat-openbsd openssh-client \
     procps strace sudo tmux tree unzip vim wget \
+    ripgrep fd-find bat fzf gh git-lfs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- uv：唯一的 Python 包管理器 ---
