@@ -65,6 +65,13 @@ RUN git clone --depth 1 --quiet https://github.com/akinomyoga/ble.sh.git /tmp/bl
 RUN uv python install ${PYTHON_VERSION}
 RUN uv venv /opt/venv --python ${PYTHON_VERSION}
 
+# --- 预装 pip + jupyterlab（适配 DSW 启动脚本，见 dockerhub#README）---
+# DSW init.sh 的 HAVE_PYTHON 检查要求 PATH 上同时有 python 与 pip（uv venv 默认无 pip，
+# 缺失即走 NO-PYTHON 分支跳过整个 jupyter 段）；预装 jupyterlab 使运行期 preinstalled 守卫
+# 直接命中，不再依赖运行时连内网 PyPI 下载。
+RUN uv pip install pip "jupyterlab>=3.0" \
+    && uv cache clean
+
 WORKDIR /app
 
 CMD ["/bin/bash"]
