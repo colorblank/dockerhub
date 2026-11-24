@@ -56,11 +56,16 @@ RUN curl -fsSL "https://github.com/astral-sh/python-build-standalone/releases/do
 # CUDA 12.4 的官方 PyTorch 发行线止于 2.6.0。
 ARG TORCH_VERSION=2.6.0
 ARG PYTORCH_INDEX=https://download.pytorch.org/whl/cu124
-RUN python -m pip install --no-cache-dir --index-url "${PYTORCH_INDEX}" "torch==${TORCH_VERSION}"
+COPY constraints.txt /usr/local/share/training-constraints.txt
+RUN python -m pip install --no-cache-dir --only-binary=:all: \
+    --constraint /usr/local/share/training-constraints.txt \
+    --index-url "${PYTORCH_INDEX}" "torch==${TORCH_VERSION}"
 
 # jupyter 包含 JupyterLab 和 Notebook，DSW 无需在启动时联网安装。
 RUN python -m pip install --no-cache-dir \
+    --only-binary=:all: --constraint /usr/local/share/training-constraints.txt \
     jupyter pandas pyarrow pyyaml safetensors ruff \
+    && python -m pip check \
     && python -c 'import jupyterlab, pandas, pyarrow, safetensors, torch, yaml; assert torch.version.cuda is not None' \
     && jupyter --version \
     && ruff --version

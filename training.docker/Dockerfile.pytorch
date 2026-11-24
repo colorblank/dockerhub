@@ -13,8 +13,12 @@ ARG TORCHVISION_VERSION=0.21.0
 ARG TORCHAUDIO_VERSION=2.6.0
 ARG PYTORCH_INDEX=https://download.pytorch.org/whl/cu124
 
-RUN python -m pip install --no-cache-dir --index-url "${PYTORCH_INDEX}" \
+RUN python -m pip install --no-cache-dir --only-binary=:all: \
+    --constraint /usr/local/share/training-constraints.txt \
+    --index-url "${PYTORCH_INDEX}" \
     "torchvision==${TORCHVISION_VERSION}" \
-    "torchaudio==${TORCHAUDIO_VERSION}"
+    "torchaudio==${TORCHAUDIO_VERSION}" \
+    && python -m pip check \
+    && python -c 'import torchaudio, torchvision'
 
 WORKDIR /app

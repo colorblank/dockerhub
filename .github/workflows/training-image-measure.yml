@@ -1,0 +1,57 @@
+name: Measure Training Image Cold Pull
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Training image to measure
+        type: choice
+        options: [training-base, training-pytorch]
+        required: true
+      digest:
+        description: Published sha256 digest
+        type: string
+        required: true
+
+permissions:
+  packages: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Measure first pull and report layers
+        env:
+          IMAGE_NAME: ${{ inputs.image }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'Expected a sha256 digest' >&2; exit 1; }
+          repo="ghcr.io/$GITHUB_REPOSITORY_OWNER/$IMAGE_NAME"
+          image="$repo@$DIGEST"
+          [[ -z "$(docker image ls -aq)" ]] || { echo 'Runner already has Docker images' >&2; exit 1; }
+          { time -p docker pull --platform linux/amd64 "$image"; } 2>&1 | tee "$RUNNER_TEMP/pull.log"
+
+          manifest=$(docker buildx imagetools inspect --raw "$image")
+          if jq -e 'has("manifests")' <<< "$manifest" >/dev/null; then
+            platform=$(jq -er '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest' <<< "$manifest")
+            manifest=$(docker buildx imagetools inspect --raw "$repo@$platform")
+          fi
+          seconds=$(awk '/^real / {print $2}' "$RUNNER_TEMP/pull.log")
+          [[ -n "$seconds" ]]
+          {
+            printf '### Cold pull: `%s`\n\n' "$image"
+            printf 'Linux amd64: **%s s** (download and extraction)\n\n' "$seconds"
+            printf '| Layer | Compressed bytes |\n| --- | ---: |\n'
+            jq -r '.layers[] | "| `\(.digest)` | \(.size) |"' <<< "$manifest"
+            jq -r '"| **Total** | **\([.layers[].size] | add)** |"' <<< "$manifest"
+          } >> "$GITHUB_STEP_SUMMARY"
+          docker image history --no-trunc --format '{{.Size}}\t{{.CreatedBy}}' "$image"

@@ -6,9 +6,10 @@ on:
       - main
     paths:
       - 'training.docker/**'
+      - '.github/workflows/training-docker-build.yml'
 
 # 版本矩阵：改动下方 ARG 即发布新镜像 tag。
-# 训练 Job 固定到具体 tag，不要依赖 latest。
+# 训练 Job 使用本工作流输出的镜像 digest。
 
 jobs:
   build-and-push:
@@ -56,10 +57,12 @@ jobs:
 
       # ---------------- 第一层：training-base ----------------
       - name: Build and push base image
+        id: base
         uses: docker/build-push-action@v6
         with:
           context: ./training.docker
           file: ./training.docker/Dockerfile.base
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/training-base:cuda${{ env.CUDA_VERSION }}-ubuntu${{ env.UBUNTU_VERSION }}-py${{ env.PYTHON_VERSION }}
@@ -73,15 +76,29 @@ jobs:
 
       # ---------------- 第二层：training-pytorch ----------------
       - name: Build and push pytorch image
+        id: pytorch
         uses: docker/build-push-action@v6
         with:
           context: ./training.docker
           file: ./training.docker/Dockerfile.pytorch
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/training-pytorch:torch${{ env.TORCH_VERSION }}-py${{ env.PYTHON_VERSION }}-cu${{ env.CU_SUFFIX }}
             ghcr.io/${{ github.repository_owner }}/training-pytorch:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/training-base:${{ github.sha }}
+            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/training-base@${{ steps.base.outputs.digest }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Publish immutable image references
+        env:
+          BASE_DIGEST: ${{ steps.base.outputs.digest }}
+          PYTORCH_DIGEST: ${{ steps.pytorch.outputs.digest }}
+        run: |
+          set -euo pipefail
+          {
+            printf '### Training image references\n\n'
+            printf -- '- `ghcr.io/%s/training-base@%s`\n' "$GITHUB_REPOSITORY_OWNER" "$BASE_DIGEST"
+            printf -- '- `ghcr.io/%s/training-pytorch@%s`\n' "$GITHUB_REPOSITORY_OWNER" "$PYTORCH_DIGEST"
+          } >> "$GITHUB_STEP_SUMMARY"

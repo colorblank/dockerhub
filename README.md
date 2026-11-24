@@ -134,6 +134,12 @@ docker run -d \
 
 两个训练镜像预装 Ruff（命令 `ruff`），默认使用 Zsh，启用历史命令建议（`zsh-autosuggestions`）和语法高亮（`zsh-syntax-highlighting`）。需要 Bash 时，显式指定 `/bin/bash`。
 
+Python 依赖（含传递依赖）在 `training.docker/constraints.txt` 中固定为 Linux amd64 / Python 3.12 / CUDA 12.4 的版本。调整依赖后同步更新约束；发布 CI 会在镜像构建时检查依赖并试导入。训练 Job 从构建摘要复制 `ghcr.io/…/training-base@sha256:…` 或 `ghcr.io/…/training-pytorch@sha256:…`，不要引用可移动的 tag。
+
+衡量拉取开销时，在 Actions 手动运行 **Measure Training Image Cold Pull**，选择镜像并填入发布摘要中的 digest。该任务在独立 Linux runner 上记录压缩层大小和首次 `docker pull` 耗时。
+
+已发布的旧版 Linux amd64 基线：`training-base` 压缩层合计 5.28 GB，`training-pytorch` 8.30 GB。其中 Node.js、Rust/Zellij 和 JupyterLab 的独立层合计 354 MB，不含与其他系统工具混装的 SSH。冷拉取计时完成前，保留现有开发工具和镜像结构。
+
 ## 4. GitHub Actions
 
 本仓库包含一个 GitHub Actions 工作流 (`.github/workflows/docker-publish.yml`)，用于自动化 Docker 镜像的构建和发布过程。该工作流通常会在代码推送到特定分支时触发，自动构建 `plex.docker` 和 `tfs.docker` 镜像并推送到配置的 Docker 镜像仓库。
