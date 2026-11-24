@@ -20,6 +20,15 @@ jobs:
   measure:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      cold-docker:
+        image: docker:28-dind
+        options: >-
+          --privileged
+          --health-cmd "docker info"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -32,13 +41,17 @@ jobs:
         env:
           IMAGE_NAME: ${{ inputs.image }}
           DIGEST: ${{ inputs.digest }}
+          COLD_DOCKER: ${{ job.services.cold-docker.id }}
         run: |
           set -euo pipefail
           [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'Expected a sha256 digest' >&2; exit 1; }
           repo="ghcr.io/$GITHUB_REPOSITORY_OWNER/$IMAGE_NAME"
           image="$repo@$DIGEST"
-          [[ -z "$(docker image ls -aq)" ]] || { echo 'Runner already has Docker images' >&2; exit 1; }
-          { time -p docker pull --platform linux/amd64 "$image"; } 2>&1 | tee "$RUNNER_TEMP/pull.log"
+          # The hosted runner has preloaded images; use a fresh service store.
+          docker cp "${DOCKER_CONFIG:-$HOME/.docker}/config.json" "$COLD_DOCKER:/tmp/config.json"
+          cold() { docker exec "$COLD_DOCKER" docker --config /tmp "$@"; }
+          [[ -z "$(cold image ls -aq)" ]] || { echo 'Isolated Docker store is not empty' >&2; exit 1; }
+          { time -p cold pull --platform linux/amd64 "$image"; } 2>&1 | tee "$RUNNER_TEMP/pull.log"
 
           manifest=$(docker buildx imagetools inspect --raw "$image")
           if jq -e 'has("manifests")' <<< "$manifest" >/dev/null; then
@@ -53,5 +66,5 @@ jobs:
             printf '| Layer | Compressed bytes |\n| --- | ---: |\n'
             jq -r '.layers[] | "| `\(.digest)` | \(.size) |"' <<< "$manifest"
             jq -r '"| **Total** | **\([.layers[].size] | add)** |"' <<< "$manifest"
-          } >> "$GITHUB_STEP_SUMMARY"
-          docker image history --no-trunc --format '{{.Size}}\t{{.CreatedBy}}' "$image"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          cold image history --no-trunc --format '{{.Size}}\t{{.CreatedBy}}' "$image"
