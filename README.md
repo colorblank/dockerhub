@@ -4,6 +4,7 @@
 
 -   **Plex Media Server**: 基于 Arch Linux，支持 Intel DG1 硬件加速和色调映射。
 -   **TensorFlow Serving**: 基于 Ubuntu 22.04，支持 HDFS 模型加载，并采用多阶段构建以减小镜像体积。
+-   **训练基础镜像**: 基于 Ubuntu 22.04 和 CUDA 12.4，预装 Python 3.12 和 CUDA 版 PyTorch，面向 A800 训练。
 
 ## 1. Plex Media Server (plex.docker)
 
@@ -125,6 +126,12 @@ docker run -d \
 
 **注意**: `sync.py` 脚本未包含在此仓库中，您需要根据您的 HDFS 环境和模型同步逻辑自行创建并添加到镜像中。
 
-## 3. GitHub Actions
+## 3. 训练镜像 (training.docker)
+
+`training-base:cuda12.4.1-ubuntu22.04-py3.12` 预装 PyTorch 2.6.0（CUDA 12.4）、PyArrow、pandas、safetensors、Jupyter（含 JupyterLab 和 Notebook）以及 PyYAML。默认 `python`、`python3` 和 `pip` 位于 `/usr/local/bin`，不使用 UV 或 `/opt/venv`；下游用 `python -m pip install ...` 追加依赖。
+
+需要 torchvision 和 torchaudio 时，使用继承该环境的 `training-pytorch` 镜像。
+
+## 4. GitHub Actions
 
 本仓库包含一个 GitHub Actions 工作流 (`.github/workflows/docker-publish.yml`)，用于自动化 Docker 镜像的构建和发布过程。该工作流通常会在代码推送到特定分支时触发，自动构建 `plex.docker` 和 `tfs.docker` 镜像并推送到配置的 Docker 镜像仓库。
