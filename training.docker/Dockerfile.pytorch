@@ -18,4 +18,3 @@ RUN python -m pip install --no-cache-dir --index-url "${PYTORCH_INDEX}" \
     "torchaudio==${TORCHAUDIO_VERSION}"
 
 WORKDIR /app
-CMD ["/bin/bash"]

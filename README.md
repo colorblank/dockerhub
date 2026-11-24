@@ -132,6 +132,8 @@ docker run -d \
 
 需要 torchvision 和 torchaudio 时，使用继承该环境的 `training-pytorch` 镜像。
 
+两个训练镜像预装 Ruff（命令 `ruff`），默认使用 Zsh，启用历史命令建议（`zsh-autosuggestions`）和语法高亮（`zsh-syntax-highlighting`）。需要 Bash 时，显式指定 `/bin/bash`。
+
 ## 4. GitHub Actions
 
 本仓库包含一个 GitHub Actions 工作流 (`.github/workflows/docker-publish.yml`)，用于自动化 Docker 镜像的构建和发布过程。该工作流通常会在代码推送到特定分支时触发，自动构建 `plex.docker` 和 `tfs.docker` 镜像并推送到配置的 Docker 镜像仓库。

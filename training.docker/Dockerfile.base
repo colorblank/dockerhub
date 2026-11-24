@@ -22,10 +22,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # --- 系统依赖：编译工具 + 常用调试/运维工具 ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build pkg-config gawk git ca-certificates curl \
+    build-essential cmake ninja-build pkg-config git ca-certificates curl \
     bash-completion htop jq lsof locales netcat-openbsd openssh-client openssh-server \
     procps strace sudo tmux tree unzip vim wget \
     ripgrep fd-find bat fzf gh git-lfs \
+    zsh zsh-autosuggestions zsh-syntax-highlighting \
     && mkdir -p /var/run/sshd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -44,12 +45,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
        | tar -xz -C /usr/local/bin \
     && rustup --version && cargo --version && zellij --version
 
-# --- ble.sh（Bash 命令行编辑器，最新 master）---
-RUN git clone --depth 1 --quiet https://github.com/akinomyoga/ble.sh.git /tmp/ble \
-    && make -C /tmp/ble install PREFIX=/usr/local >/dev/null \
-    && rm -rf /tmp/ble \
-    && echo '[[ $- == *i* ]] && source /usr/local/share/blesh/ble.sh' >> /root/.bashrc
-
 # --- 全局 Python 和 pip，不替换 Ubuntu 的 /usr/bin/python3 ---
 ARG PYTHON_VERSION
 RUN curl -fsSL "https://github.com/astral-sh/python-build-standalone/releases/download/20261123/cpython-${PYTHON_VERSION}%2B20261123-x86_64-unknown-linux-gnu-install_only.tar.gz" \
@@ -65,10 +60,22 @@ RUN python -m pip install --no-cache-dir --index-url "${PYTORCH_INDEX}" "torch==
 
 # jupyter 包含 JupyterLab 和 Notebook，DSW 无需在启动时联网安装。
 RUN python -m pip install --no-cache-dir \
-    jupyter pandas pyarrow pyyaml safetensors \
+    jupyter pandas pyarrow pyyaml safetensors ruff \
     && python -c 'import jupyterlab, pandas, pyarrow, safetensors, torch, yaml; assert torch.version.cuda is not None' \
-    && jupyter --version
+    && jupyter --version \
+    && ruff --version
+
+# --- Zsh：默认交互 shell，插件通过 Ubuntu 软件包安装 ---
+RUN usermod --shell /bin/zsh root \
+    && printf '\n%s\n' \
+       'HISTFILE=$HOME/.zsh_history' \
+       'HISTSIZE=10000' \
+       'SAVEHIST=10000' \
+       'source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh' \
+       'source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' \
+       >> /etc/zsh/zshrc
+ENV SHELL=/bin/zsh
 
 WORKDIR /app
 
-CMD ["/bin/bash"]
+CMD ["/bin/zsh"]
